@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Zoho Desk - CRM Details</title>
+</head>
+
+<body>
+
+	<h2>CRM Details</h2>
+
+	<table>
+		<tr>
+			<td>Parent Account:</td>
+			<td id="parent_account_name">&nbsp</td>
+		</tr>
+		<tr>
+			<td colspan="2">&nbsp;</td>
+		</tr>
+		<tr>
+			<td colspan="2">Parent Contacts</td>
+		</tr>
+		<tr>
+			<table id="contact_list"/>
+		</tr>
+	</table>
+	<script src="https://js.zohostatic.com/support/developer_sdk/v1/js/ZohoDeskClientSDK.min.js"></script>
+	<script>
+/*
+	let stringToHash =
+'requestURL=https://api.google.com/test&requestType=POST&queryParams={}&postBody={}&headers={"orgId":376723}&connectionLinkName=myConnectionLinkName'
+*/
+
+	function getTicketAccount(p_TicketId)
+	{
+		request = {
+			url: "https://desk.zoho.com/api/v1/tickets/" + p_TicketId,
+			headers: {'Content-Type' : 'application/json'},
+			type : 'GET',
+			data: {'':''},
+			postBody : {},
+			connectionLinkName : 'zoho_desk'
+		}
+		ZOHODESK.request(request).then(function(response) {
+			getCRMAccount(JSON.parse(JSON.parse(response)["response"])["statusMessage"]["accountId"]);
+		}).catch(function(error) {
+			console.log(error);
+		});
+	}
+
+	function getCRMAccount(p_AccountId)
+	{
+		request = {
+			url: "https://desk.zoho.com/api/v1/accounts/" + p_AccountId,
+			headers: {'Content-Type' : 'application/json'},
+			type : 'GET',
+			data: {'':''},
+			postBody : {},
+			connectionLinkName : 'zoho_desk'
+		}
+		ZOHODESK.request(request).then(function(response) {
+			getCRMParentAccount(JSON.parse(JSON.parse(response)["response"])["statusMessage"]["zohoCRMAccount"]["id"]);
+		}).catch(function(error) {
+			console.log(error);
+		});
+	}
+
+	function getCRMParentAccount(p_CRMAccountId)
+	{
+		request = {
+			url: "https://zohoapis.com/crm/v2/Accounts/" + p_CRMAccountId,
+			headers: {'Content-Type' : 'application/json'},
+			type : 'GET',
+			data: {'':''},
+			postBody : {},
+			connectionLinkName : 'zoho_crm'
+		}
+		ZOHODESK.request(request).then(function(response) {
+			document.getElementById("parent_account_name").innerHTML = JSON.parse(JSON.parse(response)["response"])["statusMessage"]["data"][0]["Parent_Account"]["name"];
+			getCRMParentContacts(JSON.parse(JSON.parse(response)["response"])["statusMessage"]["data"][0]["Parent_Account"]["id"]);
+		}).catch(function(error) {
+			console.log(error);
+		});
+	}
+
+	function getCRMParentContacts(p_CRMParentAccountId)
+	{
+		request = {
+			url: "https://zohoapis.com/crm/v2/Accounts/" + p_CRMParentAccountId + "/Contacts",
+			headers: {'Content-Type' : 'application/json'},
+			type : 'GET',
+			data: {'':''},
+			postBody : {},
+			connectionLinkName : 'zoho_crm'
+		}
+		ZOHODESK.request(request).then(function(response) {
+			let contactListHTML = "";
+			JSON.parse(JSON.parse(response)["response"])["statusMessage"]["data"].forEach(function (item,index){
+				contactListHTML = contactListHTML + "<tr><td>&nbsp</td></tr>";
+				var contactHTML = "";
+				contactHTML = contactHTML + "<tr><td>" + item["Full_Name"];
+				if (item["Contact_Active_Status"])
+				{
+					contactHTML = contactHTML + " (" + item["Contact_Active_Status"] + ")";
+				}
+				contactHTML = contactHTML + "</td></tr>";
+				if (item["Title"])
+				{
+					contactHTML = contactHTML + "<tr><td>" + item["Title"] + "</td></tr>";
+				}
+				if (item["Contact_Description"].length > 0)
+				{
+					contactHTML = contactHTML + "<tr><td>";
+					item["Contact_Description"].forEach(function (item,index,array) {
+						if(index > 0 & index + 1 < array.length)
+						{
+							contactHTML = contactHTML + ", ";
+						}
+						else if(index > 0 && index + 1 === array.length)
+						{
+							contactHTML = contactHTML + " &amp; ";
+						}
+						contactHTML = contactHTML + item;
+					});
+					contactHTML = contactHTML + "</td></tr>";
+				}
+				contactHTML = contactHTML + "<tr><td>" + item["Email"] + "</td></tr>";
+				contactHTML = contactHTML + "<tr><td><a href=\"javascript:addEmail(\'" + item["Email"] + "\',\'to\')\">To</a>&nbsp<a href=\"javascript:addEmail(\'" + item["Email"] + "\',\'cc\')\">Cc</a>&nbsp<a href=\"javascript:addEmail(\'" + item["Email"] + "\',\'bcc\')\">Bcc</a></td></tr>";
+				contactListHTML = contactListHTML + contactHTML;
+			});
+			document.getElementById("contact_list").innerHTML = contactListHTML;
+		}).catch(function(error) {
+			console.log(error);
+		});
+	}
+
+	function addEmail(p_EmailAddress,p_Type)
+	{
+		ZOHODESK.get('ticket.replyEditorRecipients').then(function(response) {
+			l_CurrentEmails = response["ticket.replyEditorRecipients"][p_Type].split(",");
+			const l_NewEmails = []
+			v_Exists = false;
+			l_CurrentEmails.forEach(function (item,index){
+				if(item.length > 0){
+					l_NewEmails.push(item);
+				}
+				if(item == p_EmailAddress){
+					v_Exists = true;
+				}
+			});
+			if(!v_Exists){
+				l_NewEmails.push(p_EmailAddress);
+				ZOHODESK.set('ticket.replyEditorRecipients',{[p_Type]:[l_NewEmails]}).then(function (response) {
+				}).catch(function (error) {
+					console.log(error);
+				});
+			}
+    	}).catch(function(err){
+			console.log(error);
+    	});
+	}
+
+	window.onload = function () {
+	 ZOHODESK.extension.onload().then(function (App) {
+		//Get ticket related data
+		ZOHODESK.get('ticket.id').then(function (response) {
+				getTicketAccount(response["ticket.id"]);
+			}).catch(function (error) {
+				console.log(error);
+			});
+		// App.instance.on("ticket_replyEditor.opened", function(data){
+			// console.log(data)
+		// })
+		// App.instance.on('ticket.comment', function(data){
+			// console.log(data);
+			return true;
+		// })
+	});
+};
+</script>
+
+	<script src="./js/extension.js" charset="utf-8"></script>
+
+</body>
+
+</html>
