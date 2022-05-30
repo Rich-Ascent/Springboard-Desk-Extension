@@ -10,7 +10,9 @@
     "whiteListedDomains":
     [
         "https://127.0.0.1:5000",
+        "https://zohoapis.eu",
         "https://zohoapis.com",
+        "https://desk.zoho.eu",
         "https://desk.zoho.com"
     ],
     "modules":
@@ -20,7 +22,7 @@
             {
                 "location": "desk.ticket.detail.rightpanel",
                 "url": "/app/widget.html",
-                "name": "Desk Extension",
+                "name": "Springboard Info",
                 "logo": "/app/img/logo.png",
                 "icon": "/app/img/icon.png"
             }
@@ -34,7 +36,36 @@
     "zohoAuthorisation":
     {},
     "connectors":
-    [],
+    [
+        {
+            "connectionLinkName": "sbde_zoho_desk",
+            "connectionName": "SBDE Zoho Desk",
+            "serviceName": "zoho_desk",
+            "userAccess": false,
+            "isUserDefinedService": false,
+            "sharedBy": "20071753895",
+            "scope":
+            [
+                "Desk.contacts.READ",
+                "Desk.tickets.READ",
+                "Desk.basic.READ",
+                "Desk.settings.READ"
+            ]
+        },
+        {
+            "connectionLinkName": "sbde_zoho_crm",
+            "connectionName": "SBDE Zoho CRM",
+            "serviceName": "zoho_crm",
+            "userAccess": false,
+            "isUserDefinedService": false,
+            "sharedBy": "20071753895",
+            "scope":
+            [
+                "ZohoCRM.modules.accounts.READ",
+                "ZohoCRM.modules.contacts.READ"
+            ]
+        }
+    ],
     "config":
     [],
     "moduleSupport": false
